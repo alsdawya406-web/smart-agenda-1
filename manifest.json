@@ -37,5 +37,69 @@
       "form_factor": "wide",
       "label": "واجهة الشاشات الكبيرة"
     }
-  ]
+  ],
+  "shortcuts": [
+    {
+      "name": "إضافة موعد جديد",
+      "short_name": "موعد جديد",
+      "description": "الانتقال السريع لتسجيل موعد",
+      "url": "./index.html"
+    }
+  ],
+  "file_handlers": [
+    {
+      "action": "./index.html",
+      "accept": {
+        "text/plain": [".txt"]
+      }
+    }
+  ],
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "protocol_handlers": [
+    {
+      "protocol": "web+agenda",
+      "url": "./index.html?type=%s"
+    }
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  },
+  "widgets": [
+    {
+      "name": "Agenda Widget",
+      "short_name": "Agenda",
+      "description": "عرض المواعيد اليومية",
+      "tag": "agenda-widget",
+      "template": "widget-template",
+      "ms_ac_template": "widget.json",
+      "data": "widget-data.json",
+      "type": "text/html",
+      "screenshots": [
+        {
+          "src": "logo.png",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "display_override": [
+    "window-controls-overlay",
+    "tabbed",
+    "standalone"
+  ],
+  "note_taking": {
+    "new_note_url": "./index.html"
+  }
 }

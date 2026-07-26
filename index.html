@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" id="html-root">
+<head>
+    <link rel="manifest" href="manifest.json">
+    <!-- ربط ملف manifest.json -->
+<link rel="manifest" href="manifest.json">
+
+<!-- ربط وتشغيل ملف sw.js (Service Worker) -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js');
+    });
+  }
+</script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Agenda Pro | أحمد السعداوي</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Pay API Script -->
+    <script async src="https://pay.google.com/gp/p/js/pay.js"></script>
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --card-bg: #1e293b;
+            --border-color: #334155;
+            --primary: #10b981;
+            --secondary: #6366f1;
+            --gold: #f59e0b;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --danger: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
+
+        /* Splash Screen (2 Seconds) */
+        #splash-screen {
+            position: fixed; inset: 0; background: #090d16; z-index: 9999;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        .splash-logo { font-size: 55px; color: var(--primary); margin-bottom: 15px; animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+
+        /* Top Bar Header */
+        .top-bar {
+            background: var(--card-bg); border-bottom: 1px solid var(--border-color);
+            padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
+        }
+        .user-brand { display: flex; align-items: center; gap: 10px; font-weight: bold; color: var(--primary); font-size: 15px; }
+        .dev-badge { background: var(--border-color); color: var(--gold); padding: 3px 8px; border-radius: 6px; font-size: 11px; }
+
+        .nav-controls { display: flex; gap: 8px; align-items: center; }
+        .btn-sm {
+            background: transparent; border: 1px solid var(--border-color); color: var(--text);
+            padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: bold;
+            display: inline-flex; align-items: center; gap: 6px; transition: 0.2s;
+        }
+        .btn-sm:hover { background: var(--border-color); }
+
+        /* Main Navigation Tabs */
+        .main-nav {
+            background: #182232; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: center; gap: 8px; padding: 10px; flex-wrap: wrap;
+        }
+        .nav-tab {
+            background: transparent; border: 1px solid transparent; color: var(--text-muted);
+            padding: 8px 16px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: bold;
+            display: flex; align-items: center; gap: 8px; transition: 0.3s;
+        }
+        .nav-tab.active { background: var(--primary); color: #000; }
+        .nav-tab.gold-tab { border: 1px solid var(--gold); color: var(--gold); }
+        .nav-tab.gold-tab.active { background: var(--gold); color: #000; }
+
+        /* App Main Container */
+        .app-container { max-width: 900px; margin: 25px auto; padding: 0 15px; flex: 1; width: 100%; }
+
+        /* Pages System */
+        .page-content { display: none; }
+        .page-content.active { display: block; animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        .card-title { font-size: 16px; color: var(--primary); margin-bottom: 15px; display: flex; align-items: center; gap: 8px; }
+
+        /* Forms */
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+        .form-control {
+            width: 100%; background: #0f172a; border: 1px solid var(--border-color);
+            color: #fff; padding: 10px; border-radius: 8px; font-size: 13px;
+        }
+        .btn-primary {
+            background: var(--primary); color: #000; border: none; padding: 12px;
+            border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%; font-size: 14px;
+            display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px;
+        }
+
+        /* Calendar */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; margin-top: 10px; }
+        .day-name { font-weight: bold; color: var(--secondary); font-size: 12px; }
+        .calendar-day {
+            background: #0f172a; border: 1px solid var(--border-color); padding: 12px 4px; border-radius: 8px;
+            min-height: 45px; cursor: pointer; position: relative; font-size: 12px;
+        }
+        .calendar-day.has-event::after {
+            content: ''; width: 6px; height: 6px; background: var(--primary); border-radius: 50%;
+            position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+        }
+
+        /* Event list */
+        .event-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .event-item {
+            background: #0f172a; border-right: 4px solid var(--primary); padding: 12px; border-radius: 8px;
+            display: flex; justify-content: space-between; align-items: center; font-size: 13px;
+        }
+
+        /* Gold Subscription Box */
+        .gold-card { background: linear-gradient(135deg, #1e293b, #2a2011); border: 2px solid var(--gold); text-align: center; padding: 25px; border-radius: 15px; }
+        .price-tag { font-size: 28px; font-weight: bold; color: var(--gold); margin: 15px 0; }
+
+        /* Footer */
+        .designer-footer {
+            background: #090d16; border-top: 1px solid var(--border-color);
+            padding: 12px; text-align: center; font-size: 12px; color: var(--text-muted);
+            display: flex; justify-content: center; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: auto;
+        }
+        .whatsapp-btn {
+            background: #25d366; color: #fff; text-decoration: none; padding: 5px 12px;
+            border-radius: 6px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+        }
+
+        html[dir="ltr"] .event-item { border-right: none; border-left: 4px solid var(--primary); }
+    </style>
+</head>
+<body>
+
+<!-- الشاشة الافتتاحية (ثانيتان) -->
+<div id="splash-screen">
+    <div class="splash-logo"><i class="fa-solid fa-calendar-check"></i></div>
+    <h2 style="color: var(--primary); font-size: 22px;">Smart Agenda Pro</h2>
+    <p style="color: var(--text-muted); font-size: 13px; margin-top: 6px;">تطوير: Ahmed Al-Saadawi</p>
+</div>
+
+<!-- Header / الشريط العلوي -->
+<div class="top-bar">
+    <div class="user-brand">
+        <i class="fa-solid fa-layer-group"></i> 
+        <span>Smart Agenda</span>
+        <span class="dev-badge"><i class="fa-solid fa-code"></i> Ahmed Al-Saadawi</span>
+    </div>
+    <div class="nav-controls">
+        <button class="btn-sm" onclick="toggleTheme()"><i class="fa-solid fa-palette"></i> <span id="txt-theme-btn">الخلفية</span></button>
+        <button class="btn-sm" onclick="exportData()"><i class="fa-solid fa-file-export"></i> <span id="txt-export-btn">تصدير</span></button>
+        <button class="btn-sm" onclick="window.print()"><i class="fa-solid fa-print"></i> <span id="txt-print-btn">طباعة</span></button>
+        <button class="btn-sm" onclick="toggleLanguage()"><i class="fa-solid fa-globe"></i> <span id="txt-lang-btn">English</span></button>
+    </div>
+</div>
+
+<!-- Navigation Tabs / أزرار التنقل بين الصفحات -->
+<div class="main-nav">
+    <button class="nav-tab active" onclick="switchPage('add-page', this)"><i class="fa-solid fa-plus-circle"></i> <span id="nav-add">إضافة موعد</span></button>
+    <button class="nav-tab" onclick="switchPage('search-page', this)"><i class="fa-solid fa-magnifying-glass"></i> <span id="nav-search">فحص التفرغ</span></button>
+    <button class="nav-tab" onclick="switchPage('calendar-page', this)"><i class="fa-solid fa-calendar-days"></i> <span id="nav-cal">التقويم والمواعيد</span></button>
+    <button class="nav-tab gold-tab" onclick="switchPage('gold-page', this)"><i class="fa-solid fa-crown"></i> <span id="nav-gold">الاشتراك الذهبي</span></button>
+    <button class="nav-tab" onclick="switchPage('guide-page', this)"><i class="fa-solid fa-book-open"></i> <span id="nav-guide">دليل الاستخدام</span></button>
+</div>
+
+<div class="app-container">
+
+    <!-- PAGE 1: إضافة موعد -->
+    <div id="add-page" class="page-content active">
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-calendar-plus"></i> <span id="t-add-title">إضافة موعد جديد</span></div>
+            
+            <div class="form-group">
+                <label id="lbl-title">عنوان الموعد / العميل</label>
+                <input type="text" id="event-title" placeholder="أدخل اسم الموعد أو التفاصيل..." class="form-control">
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label id="lbl-date">التاريخ</label>
+                    <input type="date" id="event-date" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label id="lbl-time">الوقت</label>
+                    <input type="time" id="event-time" class="form-control">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label id="lbl-priority">درجة الأولوية</label>
+                    <select id="event-priority" class="form-control">
+                        <option value="normal" id="opt-normal">عادي</option>
+                        <option value="high" id="opt-high">عاجل / هام جداً</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label id="lbl-repeat">التكرار الأسبوعي</label>
+                    <select id="event-repeat" class="form-control">
+                        <option value="none" id="opt-once">مرة واحدة فقط</option>
+                        <option value="4" id="opt-4w">شهر (أسبوعياً)</option>
+                        <option value="12" id="opt-12w">3 أشهر متتالية</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn-primary" onclick="addEvent()"><i class="fa-solid fa-floppy-disk"></i> <span id="btn-save">حفظ وتأكيد الموعد</span></button>
+        </div>
+    </div>
+
+    <!-- PAGE 2: فحص التفرغ والبحث -->
+    <div id="search-page" class="page-content">
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-magnifying-glass"></i> <span id="t-search-title">فحص الأوقات الشاغرة والبحث</span></div>
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div class="form-group">
+                    <label id="lbl-s-date">تاريخ الفحص</label>
+                    <input type="date" id="search-date" class="form-control" onchange="runSearch()">
+                </div>
+                <div class="form-group">
+                    <label id="lbl-s-time">وقت الموعد المقترح</label>
+                    <input type="time" id="search-time" class="form-control" onchange="runSearch()">
+                </div>
+            </div>
+
+            <div id="search-results" style="background:#0f172a; padding:15px; border-radius:8px; border:1px solid var(--border-color); font-size:13px; margin-top:10px; min-height:100px;">
+                <span style="color:var(--text-muted);" id="t-search-prompt">حدد التاريخ وساعة الموعد للتحقق فوراً من حالة التفرغ.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAGE 3: التقويم والمواعيد -->
+    <div id="calendar-page" class="page-content">
+        <div class="card">
+            <div class="card-title" style="justify-content: space-between;">
+                <button class="btn-sm" onclick="changeMonth(-1)">&lt;</button>
+                <span id="month-display" style="color:var(--primary); font-weight:bold;"></span>
+                <button class="btn-sm" onclick="changeMonth(1)">&gt;</button>
+            </div>
+            <div class="calendar-grid">
+                <div class="day-name">Sun</div><div class="day-name">Mon</div><div class="day-name">Tue</div>
+                <div class="day-name">Wed</div><div class="day-name">Thu</div><div class="day-name">Fri</div><div class="day-name">Sat</div>
+            </div>
+            <div class="calendar-grid" id="calendar-days"></div>
+        </div>
+
+        <div class="card">
+            <div class="card-title" style="justify-content: space-between;">
+                <span><i class="fa-solid fa-list-check"></i> <span id="t-list-title">جدول المواعيد المسجلة</span></span>
+                <input type="text" id="filter-keyword" placeholder="تصفية..." class="form-control" style="width: 120px; padding: 4px 8px;" onkeyup="renderEvents()">
+            </div>
+            <ul class="event-list" id="event-list"></ul>
+        </div>
+    </div>
+
+    <!-- PAGE 4: الاشتراك الذهبي (Google Pay) -->
+    <div id="gold-page" class="page-content">
+        <div class="card gold-card">
+            <i class="fa-solid fa-crown" style="font-size: 45px; color: var(--gold); margin-bottom: 10px;"></i>
+            <h2 style="color: var(--gold);" id="t-gold-head">باقة الاشتراك الذهبي Pro</h2>
+            <p style="color: var(--text-muted); font-size: 13px; margin-top: 5px;" id="t-gold-desc">احصل على المزايا غير المحدودة والنسخ الاحتياطي السحابي التلقائي</p>
+            
+            <div class="price-tag">50 ج.م <span style="font-size: 14px; color: var(--text-muted);">/ شهرياً</span></div>
+
+            <ul style="text-align: right; list-style: none; font-size: 13px; margin: 20px 0; display: inline-block; line-height: 2;">
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> إشعارات وتنبيهات صوتية وتلقائية للعملاء.</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> ربط ومزامنة فورية عبر السحاب.</li>
+                <li><i class="fa-solid fa-check" style="color: var(--primary);"></i> دعم فني مباشر واستشارات تنظيمية.</li>
+            </ul>
+
+            <!-- Google Pay Container Button -->
+            <div id="container-gpay" style="margin-top: 15px; display: flex; justify-content: center;"></div>
+        </div>
+    </div>
+
+    <!-- PAGE 5: دليل الاستخدام الشامل -->
+    <div id="guide-page" class="page-content">
+        <div class="card">
+            <div class="card-title"><i class="fa-solid fa-book-open"></i> <span id="t-guide-head">دليل الاستخدام والتوضيح الشامل</span></div>
+            <div style="font-size: 13px; line-height: 1.8; color: var(--text-muted);" id="t-guide-content">
+                <h4 style="color: var(--primary); margin-bottom: 5px;">1. كيفية إضافة موعد جديد:</h4>
+                <p>قم بالانتقال لصفحة <strong>"إضافة موعد"</strong>، اكتب عنوان الموعد واختر التاريخ والوقت. يمكنك تحديد التكرار الأسبوعي ليقوم النظام بجدولته تلقائياً على مدار شهر أو 3 أشهر.</p>
+                <hr style="border-color: var(--border-color); margin: 12px 0;">
+
+                <h4 style="color: var(--primary); margin-bottom: 5px;">2. طريقة فحص التفرغ والبحث:</h4>
+                <p>في صفحة <strong>"فحص التفرغ"</strong>، ادخل التاريخ والساعة لمعرفة هل الوقت متاح أم يوجد موعد آخر مسجل في نفس اللحظة لتفادي التضارب.</p>
+                <hr style="border-color: var(--border-color); margin: 12px 0;">
+
+                <h4 style="color: var(--primary); margin-bottom: 5px;">3. التحكم بالتقويم والنسخ الاحتياطي:</h4>
+                <p>يمكنك استعراض الأيام التي تحتوي على مواعيد بالنقاط الملونة، ويمكنك تصدير المواعيد كملف أو طباعتها من الأزرار العلوية للشاشة.</p>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Footer / حقوق المصمم والتواصل -->
+<div class="designer-footer">
+    <span>تطوير وتصميم بواسطة: <strong>Ahmed Al-Saadawi</strong></span>
+    <a href="https://wa.me/201000000000" target="_blank" class="whatsapp-btn">
+        <i class="fa-brands fa-whatsapp"></i> تواصل عبر الواتساب
+    </a>
+</div>
+
+<script>
+    let currentLang = 'ar';
+    let currDate = new Date();
+    let events = JSON.parse(localStorage.getItem('ultimate_agenda_events')) || [];
+    let bgIndex = 0;
+    const bgThemes = ['#0f172a', '#18181b', '#022c22', '#1e1b4b'];
+
+    // Splash Screen Exactly 2 Seconds (2000ms)
+    window.addEventListener('load', () => {
+        setTimeout(() => {
+            const splash = document.getElementById('splash-screen');
+            splash.style.opacity = '0';
+            setTimeout(() => splash.style.display = 'none', 500);
+        }, 2000);
+    });
+
+    // Navigation Between Pages
+    function switchPage(pageId, btn) {
+        document.querySelectorAll('.page-content').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('.nav-tab').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(pageId).classList.add('active');
+        btn.classList.add('active');
+    }
+
+    const i18n = {
+        ar: {
+            themeBtn: "الخلفية", exportBtn: "تصدير", printBtn: "طباعة", langName: "English",
+            navAdd: "إضافة موعد", navSearch: "فحص التفرغ", navCal: "التقويم والمواعيد", navGold: "الاشتراك الذهبي", navGuide: "دليل الاستخدام",
+            addTitle: "إضافة موعد جديد", lblTitle: "عنوان الموعد / العميل", lblDate: "التاريخ", lblTime: "الوقت",
+            lblPriority: "درجة الأولوية", lblRepeat: "التكرار الأسبوعي", optNormal: "عادي", optHigh: "عاجل / هام جداً",
+            optOnce: "مرة واحدة فقط", opt4w: "شهر (أسبوعياً)", opt12w: "3 أشهر متتالية", btnSave: "حفظ وتأكيد الموعد",
+            searchTitle: "فحص الأوقات الشاغرة والبحث", lblSDate: "تاريخ الفحص", lblSTime: "وقت الموعد المقترح",
+            searchPrompt: "حدد التاريخ وساعة الموعد للتحقق فوراً من حالة التفرغ.", listTitle: "جدول المواعيد المسجلة"
+        },
+        en: {
+            themeBtn: "Background", exportBtn: "Export", printBtn: "Print", langName: "العربية",
+            navAdd: "Add Event", navSearch: "Check Availability", navCal: "Calendar & Events", navGold: "Gold Plan", navGuide: "User Guide",
+            addTitle: "Add New Appointment", lblTitle: "Title / Client Name", lblDate: "Date", lblTime: "Time",
+            lblPriority: "Priority Level", lblRepeat: "Recurrence", optNormal: "Normal", optHigh: "Urgent / High",
+            optOnce: "Once Only", opt4w: "1 Month (Weekly)", opt12w: "3 Consecutive Months", btnSave: "Save Appointment",
+            searchTitle: "Check Free Slots & Search", lblSDate: "Inspection Date", lblSTime: "Proposed Time",
+            searchPrompt: "Select a date and time to instantly check availability status.", listTitle: "Registered Appointments"
+        }
+    };
+
+    function toggleTheme() {
+        bgIndex = (bgIndex + 1) % bgThemes.length;
+        document.documentElement.style.setProperty('--bg-main', bgThemes[bgIndex]);
+    }
+
+    function toggleLanguage() {
+        currentLang = currentLang === 'ar' ? 'en' : 'ar';
+        const html = document.getElementById('html-root');
+        html.setAttribute('lang', currentLang);
+        html.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+
+        const t = i18n[currentLang];
+        document.getElementById('txt-theme-btn').innerText = t.themeBtn;
+        document.getElementById('txt-export-btn').innerText = t.exportBtn;
+        document.getElementById('txt-print-btn').innerText = t.printBtn;
+        document.getElementById('txt-lang-btn').innerText = t.langName;
+        document.getElementById('nav-add').innerText = t.navAdd;
+        document.getElementById('nav-search').innerText = t.navSearch;
+        document.getElementById('nav-cal').innerText = t.navCal;
+        document.getElementById('nav-gold').innerText = t.navGold;
+        document.getElementById('nav-guide').innerText = t.navGuide;
+        document.getElementById('t-add-title').innerText = t.addTitle;
+        document.getElementById('lbl-title').innerText = t.lblTitle;
+        document.getElementById('lbl-date').innerText = t.lblDate;
+        document.getElementById('lbl-time').innerText = t.lblTime;
+        document.getElementById('lbl-priority').innerText = t.lblPriority;
+        document.getElementById('lbl-repeat').innerText = t.lblRepeat;
+        document.getElementById('opt-normal').innerText = t.optNormal;
+        document.getElementById('opt-high').innerText = t.optHigh;
+        document.getElementById('opt-once').innerText = t.optOnce;
+        document.getElementById('opt-4w').innerText = t.opt4w;
+        document.getElementById('opt-12w').innerText = t.opt12w;
+        document.getElementById('btn-save').innerText = t.btnSave;
+        document.getElementById('t-search-title').innerText = t.searchTitle;
+        document.getElementById('lbl-s-date').innerText = t.lblSDate;
+        document.getElementById('lbl-s-time').innerText = t.lblSTime;
+        document.getElementById('t-search-prompt').innerText = t.searchPrompt;
+        document.getElementById('t-list-title').innerText = t.listTitle;
+
+        renderCalendar();
+        renderEvents();
+    }
+
+    function addEvent() {
+        const title = document.getElementById('event-title').value.trim();
+        const date = document.getElementById('event-date').value;
+        const time = document.getElementById('event-time').value;
+        const priority = document.getElementById('event-priority').value;
+        const repeat = document.getElementById('event-repeat').value;
+
+        if (!title || !date || !time) {
+            alert(currentLang === 'ar' ? "يرجى كتابة العنوان وتحديد التاريخ والوقت!" : "Please complete all required fields!");
+            return;
+        }
+
+        let baseDate = new Date(date);
+        let count = repeat === 'none' ? 1 : parseInt(repeat);
+
+        for (let i = 0; i < count; i++) {
+            let nextDate = new Date(baseDate);
+            nextDate.setDate(baseDate.getDate() + (i * 7));
+            events.push({ id: Date.now() + Math.random(), title, date: nextDate.toISOString().split('T')[0], time, priority });
+        }
+
+        localStorage.setItem('ultimate_agenda_events', JSON.stringify(events));
+        document.getElementById('event-title').value = '';
+        document.getElementById('event-date').value = '';
+        document.getElementById('event-time').value = '';
+
+        alert(currentLang === 'ar' ? "تم حفظ الموعد بنجاح!" : "Appointment Saved Successfully!");
+        renderCalendar();
+        renderEvents();
+    }
+
+    function renderEvents() {
+        const list = document.getElementById('event-list');
+        const filter = document.getElementById('filter-keyword').value.toLowerCase();
+        list.innerHTML = '';
+
+        const filtered = events.filter(e => e.title.toLowerCase().includes(filter));
+
+        if (filtered.length === 0) {
+            list.innerHTML = `<li style="color:var(--text-muted); text-align:center; font-size:12px;">${currentLang === 'ar' ? 'لا توجد مواعيد حالية' : 'No appointments found'}</li>`;
+            return;
+        }
+
+        filtered.forEach(e => {
+            list.innerHTML += `
+                <li class="event-item" style="border-color: ${e.priority === 'high' ? 'var(--danger)' : 'var(--primary)'};">
+                    <div>
+                        <strong>${e.title}</strong>
+                        <div style="font-size:11px; color:var(--text-muted); margin-top:2px;">${e.date} | ${e.time}</div>
+                    </div>
+                    <i class="fa-solid fa-trash" style="color:var(--danger); cursor:pointer;" onclick="deleteEvent(${e.id})"></i>
+                </li>
+            `;
+        });
+    }
+
+    function deleteEvent(id) {
+        events = events.filter(e => e.id !== id);
+        localStorage.setItem('ultimate_agenda_events', JSON.stringify(events));
+        renderCalendar();
+        renderEvents();
+    }
+
+    function runSearch() {
+        const dVal = document.getElementById('search-date').value;
+        const tVal = document.getElementById('search-time').value;
+        const box = document.getElementById('search-results');
+        if (!dVal) return;
+
+        const dayEvents = events.filter(e => e.date === dVal);
+        let html = `<strong>📅 ${dVal}</strong><br>`;
+
+        if (dayEvents.length === 0) {
+            html += `<span style="color:var(--primary);">${currentLang === 'ar' ? '✅ هذا اليوم فارغ ومتفرغ بالكامل.' : '✅ Completely free day.'}</span>`;
+        } else {
+            dayEvents.forEach(e => html += `• ${e.time} - ${e.title}<br>`);
+        }
+
+        if (tVal) {
+            const match = dayEvents.find(e => e.time === tVal);
+            html += match ? 
+                `<div style="color:var(--danger); margin-top:6px;">❌ الساعة ${tVal} مشغولة بموعد: (${match.title})</div>` : 
+                `<div style="color:var(--primary); margin-top:6px;">✅ الساعة ${tVal} متاحة للجدولة!</div>`;
+        }
+        box.innerHTML = html;
+    }
+
+    function renderCalendar() {
+        const y = currDate.getFullYear(), m = currDate.getMonth();
+        const first = new Date(y, m, 1).getDay(), days = new Date(y, m + 1, 0).getDate();
+        document.getElementById('month-display').innerText = `${currDate.toLocaleString(currentLang === 'ar' ? 'ar-EG' : 'en-US', { month: 'long' })} ${y}`;
+
+        const grid = document.getElementById('calendar-days');
+        grid.innerHTML = '';
+        for (let i = 0; i < first; i++) grid.appendChild(document.createElement('div'));
+
+        for (let day = 1; day <= days; day++) {
+            const dayDiv = document.createElement('div');
+            let full = `${y}-${(m + 1).toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+            dayDiv.className = `calendar-day ${events.some(e => e.date === full) ? 'has-event' : ''}`;
+            dayDiv.innerText = day;
+            dayDiv.onclick = () => { 
+                document.getElementById('search-date').value = full; 
+                switchPage('search-page', document.querySelectorAll('.nav-tab')[1]);
+                runSearch(); 
+            };
+            grid.appendChild(dayDiv);
+        }
+    }
+
+    function changeMonth(dir) { currDate.setMonth(currDate.getMonth() + dir); renderCalendar(); }
+
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(events));
+        const dlAnchor = document.createElement('a');
+        dlAnchor.setAttribute("href", dataStr);
+        dlAnchor.setAttribute("download", "agenda_backup.json");
+        dlAnchor.click();
+    }
+
+    // Google Pay Integration Setup
+    const paymentsClient = new google.payments.api.PaymentsClient({environment: 'TEST'});
+    const button = paymentsClient.createButton({
+        onClick: () => alert('جاري توجيهك لإتمام دفع الاشتراك الذهبي (50 ج.م) عبر Google Pay...'),
+        buttonRootNode: document.getElementById('container-gpay')
+    });
+
+    renderCalendar();
+    renderEvents();
+</script>
+</body>
+</html>

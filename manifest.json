@@ -1,0 +1,49 @@
+{
+  "id": "/",
+  "name": "Smart Agenda Pro",
+  "short_name": "Agenda",
+  "description": "تطبيق ذكي لتنظيم المواعيد، فحص الأوقات الشاغرة، وتتبع المهام اليومية بكل سهولة واحترافية",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#007bff",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "screenshot1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "الشاشة الرئيسية للموبايل"
+    },
+    {
+      "src": "screenshot2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "تفاصيل المهام والمواعيد"
+    },
+    {
+      "src": "screenshot3.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "واجهة الشاشات الكبيرة"
+    }
+  ]
+}
